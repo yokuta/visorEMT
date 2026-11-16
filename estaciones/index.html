@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Demanda de las estaciones de Madrid a lo largo del día</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root { color-scheme: light; --papel: rgba(255,255,255,.94); --tinta: #1c2430; --suave: #5d6876; --linea: #d9dee5;
+          --pasa: #1f5fad; --origen: #e08a00; --fondo: #e9ecef; --fuente: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; --papel: rgba(27,34,43,.94); --tinta: #e6ebf0;
+          --suave: #a7b2bf; --linea: #364352; --fondo: #1d232b; } }
+  :root[data-theme="dark"] { color-scheme: dark; --papel: rgba(27,34,43,.94); --tinta: #e6ebf0; --suave: #a7b2bf; --linea: #364352; --fondo: #1d232b; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; font-family: var(--fuente); color: var(--tinta); background: var(--fondo); }
+  #mapa { position: absolute; inset: 0; background: var(--fondo); }
+  .panel { position: absolute; z-index: 1000; left: 16px; top: calc(env(safe-area-inset-top, 0px) + 16px); width: 340px; max-height: calc(100% - 32px);
+           overflow: auto; background: var(--papel); border: 1px solid var(--linea); border-radius: 14px; padding: 18px 18px 14px;
+           box-shadow: 0 6px 24px rgba(0,0,0,.12); backdrop-filter: blur(6px); }
+  h1 { font-size: 1.15rem; margin: 0 0 4px; line-height: 1.25; }
+  .sub { color: var(--suave); font-size: .86rem; margin: 0 0 14px; }
+  .tipos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 14px; }
+  .tipos button { font: inherit; font-size: .8rem; padding: 7px 2px; border: 1px solid var(--linea); background: transparent; color: var(--tinta);
+                  border-radius: 8px; cursor: pointer; }
+  .tipos button[aria-pressed="true"] { background: var(--tinta); color: var(--papel); border-color: var(--tinta); }
+  .reloj { font-size: 2.6rem; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .fila { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+  input[type=range] { width: 100%; accent-color: var(--pasa); }
+  .boton { font: inherit; font-size: .9rem; border: 1px solid var(--linea); background: transparent; color: var(--tinta); border-radius: 8px;
+           padding: 6px 12px; cursor: pointer; }
+  .boton:focus-visible, .tipos button:focus-visible { outline: 3px solid var(--origen); outline-offset: 2px; }
+  select { font: inherit; font-size: .85rem; background: transparent; color: var(--tinta); border: 1px solid var(--linea); border-radius: 8px; padding: 5px; }
+  .leyenda { display: flex; gap: 14px; align-items: center; font-size: .82rem; color: var(--suave); margin: 12px 0 6px; flex-wrap: wrap; }
+  .leyenda svg { vertical-align: middle; }
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; font-variant-numeric: tabular-nums; }
+  td, th { padding: 3px 4px; border-bottom: 1px solid var(--linea); text-align: right; }
+  td:first-child, th:first-child { text-align: left; }
+  th { color: var(--suave); font-weight: 600; }
+  .carga { display: none; margin-top: 10px; font-size: .85rem; }
+  .leaflet-tooltip { font-family: var(--fuente); }
+  @media (max-width: 640px) { .panel { left: 8px; right: 8px; width: auto; top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); max-height: 52%; } }
+</style>
+</head>
+<body>
+<div id="mapa" aria-label="Mapa de Madrid"></div>
+<section class="panel" aria-label="Controles">
+  <h1>¿Cuánta gente empieza su viaje en cada estación y cuánta pasa por ella?</h1>
+  <p class="sub">Media por día, en franjas de 15 minutos. Febrero de 2022.</p>
+  <div class="tipos" role="group" aria-label="Tipo de día" id="tipos"></div>
+  <div class="reloj" id="reloj">08:00</div>
+  <div class="fila"><input type="range" id="franja" min="0" max="95" step="1" value="32" aria-label="Hora del día"></div>
+  <div class="fila">
+    <button class="boton" id="play" type="button">▶ Reproducir</button>
+    <select id="velocidad" aria-label="Velocidad"><option value="0.6">lenta</option><option value="1.5" selected>normal</option><option value="4">rápida</option></select>
+    <label class="sub" style="margin:0">tamaño <input type="range" id="escala" min="0.4" max="2.5" step="0.1" value="1" style="width:70px;vertical-align:middle"></label>
+  </div>
+  <div class="leyenda">
+    <span><svg width="22" height="22"><circle cx="11" cy="11" r="9" fill="rgba(31,95,173,.18)" stroke="#1f5fad" stroke-width="2"/></svg> pasan por la estación</span>
+    <span><svg width="22" height="22"><circle cx="11" cy="11" r="6" fill="#e08a00"/></svg> empiezan aquí el viaje</span>
+  </div>
+  <p class="sub" style="margin:4px 0 8px">«Pasan» = empiezan aquí + llegan de otro modo y suben aquí + cambian de línea dentro.</p>
+  <table><thead><tr><th>Estación</th><th>Pasan</th><th>Empiezan</th></tr></thead><tbody id="top"></tbody></table>
+  <div class="carga" id="carga"><p>Abre la página desde un servidor (o GitHub Pages). Si la abres como fichero, elige aquí los dos CSV:</p>
+    <input type="file" id="ficheros" accept=".csv" multiple></div>
+</section>
+<script>
+const TIPOS = ["lunes-jueves", "viernes", "sábado", "domingo"];
+let tipo = "lunes-jueves", t = 32, reproduciendo = false, ultimo = 0, escala = 1;
+let estaciones = [], datos = {}, maximo = 1, capas = [];
+
+function csv(texto) {                       // lector de CSV con comillas
+  const filas = []; let fila = [], campo = "", q = false;
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i];
+    if (q) { if (c === '"') { if (texto[i + 1] === '"') { campo += '"'; i++; } else q = false; } else campo += c; }
+    else if (c === '"') q = true;
+    else if (c === ",") { fila.push(campo); campo = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && texto[i + 1] === "\n") i++; fila.push(campo); filas.push(fila); fila = []; campo = ""; }
+    else campo += c;
+  }
+  if (campo || fila.length) { fila.push(campo); filas.push(fila); }
+  const cab = filas.shift();
+  return filas.filter(f => f.length === cab.length).map(f => Object.fromEntries(cab.map((h, k) => [h, f[k]])));
+}
+
+const mapa = L.map("mapa", { zoomControl: false, preferCanvas: true }).setView([40.425, -3.69], 12);
+L.control.zoom({ position: "bottomright" }).addTo(mapa);
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+  { attribution: "Esri, HERE, Garmin, © OpenStreetMap", maxZoom: 16 }).addTo(mapa);
+
+function preparar(est, dem) {
+  estaciones = est.map(e => ({ ...e, lat: +e.lat, lon: +e.lon }));
+  const idx = Object.fromEntries(estaciones.map((e, i) => [e.nodo, i]));
+  for (const tp of TIPOS) datos[tp] = estaciones.map(() => ({ o: new Float32Array(96), p: new Float32Array(96), m: new Float32Array(96), l: new Float32Array(96) }));
+  for (const r of dem) {
+    const i = idx[r.nodo]; if (i === undefined || !datos[r.tipo_dia]) continue;
+    const d = datos[r.tipo_dia][i], f = +r.franja;
+    d.o[f] = +r.origen; d.p[f] = +r.pasa; d.m[f] = +r.transb_modo; d.l[f] = +r.transb_linea;
+    maximo = Math.max(maximo, +r.pasa);
+  }
+  capas = estaciones.map(e => {
+    const fuera = L.circleMarker([e.lat, e.lon], { radius: 0, color: "#1f5fad", weight: 1.6, fillColor: "#1f5fad", fillOpacity: .16 }).addTo(mapa);
+    const dentro = L.circleMarker([e.lat, e.lon], { radius: 0, stroke: false, fillColor: "#e08a00", fillOpacity: .9 }).addTo(mapa);
+    fuera.bindTooltip("", { sticky: true }); dentro.bindTooltip("", { sticky: true });
+    return { fuera, dentro };
+  });
+  if (estaciones.length) mapa.fitBounds(estaciones.map(e => [e.lat, e.lon]), { padding: [30, 30] });
+  dibujar();
+}
+
+const valor = (arr, x) => { const a = Math.floor(x) % 96, b = (a + 1) % 96, w = x - Math.floor(x); return arr[a] * (1 - w) + arr[b] * w; };
+const radio = v => v > 0 ? Math.max(1.5, 34 * escala * Math.sqrt(v / maximo)) : 0;
+const fmt = v => v >= 100 ? Math.round(v).toLocaleString("es-ES") : v.toLocaleString("es-ES", { maximumFractionDigits: 1 });
+
+function dibujar() {
+  const min = Math.round(t * 15) % 1440;
+  document.getElementById("reloj").textContent = `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+  const filas = [];
+  estaciones.forEach((e, i) => {
+    const d = datos[tipo][i], p = valor(d.p, t), o = valor(d.o, t), m = valor(d.m, t), l = valor(d.l, t);
+    capas[i].fuera.setRadius(radio(p)); capas[i].dentro.setRadius(radio(o));
+    const txt = `<b>${e.nombre}</b> <span style="color:#888">${e.modos}</span><br>Pasan: <b>${fmt(p)}</b><br>· empiezan aquí: ${fmt(o)}<br>· llegan de otro modo: ${fmt(m)}<br>· cambian de línea: ${fmt(l)}`;
+    capas[i].fuera.setTooltipContent(txt); capas[i].dentro.setTooltipContent(txt);
+    filas.push([e.nombre, p, o]);
+  });
+  filas.sort((a, b) => b[1] - a[1]);
+  document.getElementById("top").innerHTML = filas.slice(0, 8).map(f => `<tr><td>${f[0]}</td><td>${fmt(f[1])}</td><td>${fmt(f[2])}</td></tr>`).join("");
+}
+
+const deslizador = document.getElementById("franja");
+deslizador.addEventListener("input", () => { t = +deslizador.value; dibujar(); });
+document.getElementById("escala").addEventListener("input", ev => { escala = +ev.target.value; dibujar(); });
+const botonPlay = document.getElementById("play");
+botonPlay.addEventListener("click", () => {
+  reproduciendo = !reproduciendo; botonPlay.textContent = reproduciendo ? "❚❚ Pausa" : "▶ Reproducir";
+  ultimo = performance.now(); if (reproduciendo) requestAnimationFrame(paso);
+});
+function paso(ahora) {
+  if (!reproduciendo) return;
+  t = (t + (ahora - ultimo) / 1000 * +document.getElementById("velocidad").value) % 96; ultimo = ahora;
+  deslizador.value = Math.floor(t); dibujar(); requestAnimationFrame(paso);
+}
+const cont = document.getElementById("tipos");
+TIPOS.forEach(tp => {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = tp; b.setAttribute("aria-pressed", tp === tipo);
+  b.addEventListener("click", () => { tipo = tp; cont.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); dibujar(); });
+  cont.appendChild(b);
+});
+
+Promise.all(["estaciones.csv", "demanda.csv"].map(f => fetch(f).then(r => { if (!r.ok) throw 0; return r.text(); })))
+  .then(([a, b]) => preparar(csv(a), csv(b)))
+  .catch(() => {
+    document.getElementById("carga").style.display = "block";
+    document.getElementById("ficheros").addEventListener("change", async ev => {
+      const fs = [...ev.target.files], leer = n => fs.find(f => f.name.includes(n))?.text();
+      const a = await leer("estaciones"), b = await leer("demanda");
+      if (a && b) { document.getElementById("carga").style.display = "none"; preparar(csv(a), csv(b)); }
+    });
+  });
+</script>
+</body>
+</html>

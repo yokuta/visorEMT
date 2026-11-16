@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Movilidad en transporte público · Madrid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root { color-scheme: light; --fondo: #e8ebee; --panel: rgba(255,255,255,.88); --tinta: #141b24; --suave: #5b6675; --linea: rgba(20,27,36,.10);
+          --tarjeta: rgba(255,255,255,.75); --tarjeta-hover: #fff; --sombra: 0 18px 50px rgba(15,23,35,.18);
+          --fuente: "Manrope", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; --fondo: #15191e; --panel: rgba(24,29,36,.86);
+          --tinta: #eef2f6; --suave: #9aa6b4; --linea: rgba(255,255,255,.10); --tarjeta: rgba(255,255,255,.04); --tarjeta-hover: rgba(255,255,255,.09);
+          --sombra: 0 18px 50px rgba(0,0,0,.45); } }
+  :root[data-theme="dark"] { color-scheme: dark; --fondo: #15191e; --panel: rgba(24,29,36,.86); --tinta: #eef2f6; --suave: #9aa6b4;
+          --linea: rgba(255,255,255,.10); --tarjeta: rgba(255,255,255,.04); --tarjeta-hover: rgba(255,255,255,.09); --sombra: 0 18px 50px rgba(0,0,0,.45); }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: var(--fondo); color: var(--tinta); font-family: var(--fuente); overflow: hidden; }
+  #mapa { position: absolute; inset: 0; background: var(--fondo); transition: filter .6s ease; }
+  body.abierto #mapa { filter: saturate(.6) brightness(.97); }
+
+  .panel { position: absolute; z-index: 1000; top: calc(env(safe-area-inset-top, 0px) + 20px); left: 20px; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+           width: 380px; display: flex; flex-direction: column; background: var(--panel); backdrop-filter: blur(14px) saturate(1.2);
+           -webkit-backdrop-filter: blur(14px) saturate(1.2); border: 1px solid var(--linea); border-radius: 22px; box-shadow: var(--sombra);
+           transition: transform .7s cubic-bezier(.2,.8,.2,1), opacity .5s ease; }
+  body.abierto .panel { transform: translateX(calc(-100% - 40px)); opacity: 0; pointer-events: none; }
+  .cabecera { padding: 26px 26px 14px; }
+  .kicker { font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--suave); }
+  h1 { font-size: 1.75rem; line-height: 1.08; margin: 10px 0 10px; font-weight: 800; letter-spacing: -.02em; }
+  .intro { color: var(--suave); font-size: .92rem; line-height: 1.5; margin: 0; }
+  .buscar { margin: 16px 26px 6px; position: relative; }
+  .buscar input { width: 100%; font: inherit; font-size: .92rem; padding: 11px 14px 11px 38px; border-radius: 12px; border: 1px solid var(--linea);
+                  background: var(--tarjeta); color: var(--tinta); outline: none; }
+  .buscar input:focus { border-color: #1f6fd1; }
+  .buscar svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); opacity: .5; }
+  .lista { flex: 1; overflow-y: auto; padding: 8px 16px 12px; }
+  .tarjeta { display: grid; grid-template-columns: 54px 1fr; gap: 14px; align-items: center; width: 100%; text-align: left; font: inherit; color: inherit;
+             background: var(--tarjeta); border: 1px solid var(--linea); border-radius: 16px; padding: 14px; margin: 8px 0; cursor: pointer;
+             opacity: 0; transform: translateY(10px); animation: entrar .55s cubic-bezier(.2,.8,.2,1) forwards;
+             transition: background .2s ease, transform .2s ease, box-shadow .2s ease; }
+  .tarjeta:hover, .tarjeta:focus-visible { background: var(--tarjeta-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(15,23,35,.12); outline: none; }
+  .tarjeta:focus-visible { box-shadow: 0 0 0 3px #1f6fd1; }
+  @keyframes entrar { to { opacity: 1; transform: none; } }
+  .insignia { width: 54px; height: 54px; border-radius: 14px; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 1.35rem;
+              letter-spacing: -.02em; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
+  .insignia.redonda { border-radius: 50%; }
+  .t-titulo { font-weight: 800; font-size: 1.02rem; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .t-fecha { font-weight: 600; font-size: .78rem; color: var(--suave); }
+  .t-sub { font-size: .82rem; color: var(--suave); margin: 2px 0 7px; line-height: 1.35; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-size: .72rem; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: var(--linea); color: var(--tinta); font-variant-numeric: tabular-nums; }
+  .pie { padding: 12px 26px 20px; font-size: .74rem; color: var(--suave); border-top: 1px solid var(--linea); }
+  .vacio { color: var(--suave); font-size: .9rem; padding: 20px 10px; }
+
+  .escena { position: absolute; inset: 0; z-index: 1500; opacity: 0; transform: scale(1.025); pointer-events: none;
+            transition: opacity .6s ease, transform .8s cubic-bezier(.2,.8,.2,1); }
+  body.visible .escena { opacity: 1; transform: none; pointer-events: auto; }
+  .escena iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--fondo); }
+  .volver { position: absolute; z-index: 2000; top: calc(env(safe-area-inset-top, 0px) + 18px); right: 18px; display: flex; align-items: center; gap: 10px;
+            font: inherit; font-weight: 700; font-size: .9rem; color: var(--tinta); background: var(--panel); backdrop-filter: blur(12px);
+            border: 1px solid var(--linea); border-radius: 999px; padding: 7px 16px 7px 8px; box-shadow: var(--sombra); cursor: pointer;
+            opacity: 0; transform: translateY(-12px); pointer-events: none; transition: opacity .4s ease .25s, transform .5s cubic-bezier(.2,.8,.2,1) .25s; }
+  body.visible .volver { opacity: 1; transform: none; pointer-events: auto; }
+  .volver .insignia { width: 30px; height: 30px; border-radius: 8px; font-size: .85rem; }
+  .volver:focus-visible { outline: 3px solid #1f6fd1; outline-offset: 2px; }
+  .cargando { position: absolute; z-index: 1400; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 12px 20px; border-radius: 999px;
+              background: var(--panel); border: 1px solid var(--linea); font-size: .88rem; font-weight: 600; box-shadow: var(--sombra);
+              opacity: 0; transition: opacity .3s ease; pointer-events: none; }
+  body.cargando-on .cargando { opacity: 1; }
+  .ruta-viva { transition: opacity .35s ease, stroke-width .25s ease; }
+  @media (max-width: 720px) {
+    .panel { left: 10px; right: 10px; width: auto; top: auto; height: 58%; bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
+    body.abierto .panel { transform: translateY(calc(100% + 30px)); }
+    h1 { font-size: 1.35rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before { transition-duration: .01s !important; animation-duration: .01s !important; } }
+</style>
+</head>
+<body>
+<div id="mapa" aria-label="Mapa de Madrid"></div>
+
+<aside class="panel" aria-label="Catálogo de mapas">
+  <div class="cabecera">
+    <div class="kicker">Tesis doctoral · tGIS · UCM</div>
+    <h1>Movilidad en transporte público en Madrid</h1>
+    <p class="intro">Viajes reconstruidos a partir de las validaciones de febrero de 2022. Elige un mapa para explorarlo.</p>
+  </div>
+  <label class="buscar"><span class="visualmente-oculto" style="position:absolute;left:-9999px">Buscar</span>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="buscar" type="search" placeholder="Buscar línea o mapa…" autocomplete="off">
+  </label>
+  <div class="lista" id="lista" role="list"></div>
+  <div class="pie">Datos agregados del Consorcio Regional de Transportes de Madrid. Elaboración propia.</div>
+</aside>
+
+<div class="cargando" id="cargando">Cargando mapa…</div>
+<div class="escena" id="escena"><iframe id="marco" title="Mapa seleccionado"></iframe></div>
+<button class="volver" id="volver" type="button"><span class="insignia" id="volver-insignia"></span><span>← Volver al visor</span></button>
+
+<script>
+const oscuro = matchMedia("(prefers-color-scheme: dark)").matches;
+const mapa = L.map("mapa", { zoomControl: false, attributionControl: true }).setView([40.42, -3.70], 11);
+L.control.zoom({ position: "bottomright" }).addTo(mapa);
+L.tileLayer(`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${oscuro ? "Dark" : "Light"}_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
+  { attribution: "Esri, HERE, Garmin, © OpenStreetMap", maxZoom: 18 }).addTo(mapa);
+
+let catalogo = [], capas = {}, abierto = null, vistaInicial = null;
+
+function csv(texto) {
+  const filas = []; let fila = [], campo = "", q = false;
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i];
+    if (q) { if (c === '"') { if (texto[i + 1] === '"') { campo += '"'; i++; } else q = false; } else campo += c; }
+    else if (c === '"') q = true; else if (c === ",") { fila.push(campo); campo = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && texto[i + 1] === "\n") i++; fila.push(campo); filas.push(fila); fila = []; campo = ""; }
+    else campo += c;
+  }
+  if (campo || fila.length) { fila.push(campo); filas.push(fila); }
+  const cab = filas.shift() || [];
+  return filas.filter(f => f.length === cab.length).map(f => Object.fromEntries(cab.map((h, k) => [h, f[k]])));
+}
+const fmt = n => Number(n).toLocaleString("es-ES");
+const insignia = (e, clase = "") => `<span class="insignia ${e.tipo === "estaciones" ? "redonda" : ""} ${clase}" style="background:${e.color}">${e.linea}</span>`;
+
+function dibujarTrazo(linea) {               // animación de "dibujado" del recorrido
+  const p = linea.getElement?.(); if (!p || !p.getTotalLength) return;
+  const L_ = p.getTotalLength(); p.style.strokeDasharray = L_; p.style.strokeDashoffset = L_;
+  p.getBoundingClientRect(); p.style.transition = "stroke-dashoffset 1.8s cubic-bezier(.4,0,.2,1)"; p.style.strokeDashoffset = 0;
+  setTimeout(() => { p.style.strokeDasharray = ""; p.style.transition = ""; }, 1900);
+}
+
+async function cargarPrevias() {
+  const limites = [];
+  for (const e of catalogo) {
+    try {
+      if (e.tipo === "linea") {
+        const rec = csv(await (await fetch(`${e.carpeta}/recorrido.csv`)).text());
+        const sentidos = [...new Set(rec.map(r => r.sentido))];
+        capas[e.id] = sentidos.map(s => {
+          const pl = L.polyline(rec.filter(r => r.sentido === s).map(r => [+r.lat, +r.lon]),
+            { color: e.color, weight: 4, opacity: .85, lineCap: "round", className: "ruta-viva" }).addTo(mapa);
+          pl.on("click", () => abrir(e.id)); pl.bindTooltip(`${e.titulo} · ${e.fecha}`, { sticky: true });
+          dibujarTrazo(pl); return pl;
+        });
+      } else {
+        const est = csv(await (await fetch(`${e.carpeta}/estaciones.csv`)).text());
+        capas[e.id] = est.map(s => L.circleMarker([+s.lat, +s.lon], { radius: 3, color: e.color, weight: 1, fillColor: e.color, fillOpacity: .55,
+          className: "ruta-viva" }).on("click", () => abrir(e.id)).bindTooltip(s.nombre).addTo(mapa));
+      }
+      limites.push(e.caja);
+    } catch (err) { console.warn("No se pudo cargar la vista previa de", e.id, err); }
+  }
+  if (limites.length) {
+    const b = L.latLngBounds(limites.flat());
+    vistaInicial = b;
+    mapa.flyToBounds(b, { paddingTopLeft: [innerWidth > 720 ? 420 : 20, 40], paddingBottomRight: [40, innerWidth > 720 ? 40 : innerHeight * .6], duration: 1.2 });
+  }
+}
+
+function resaltar(id) {
+  for (const [k, lista] of Object.entries(capas)) for (const c of lista) {
+    c.setStyle({ opacity: !id || k === id ? (c.options.radius ? 1 : .9) : .12, fillOpacity: !id || k === id ? .6 : .08,
+                 weight: id && k === id && !c.options.radius ? 7 : (c.options.radius ? 1 : 4) });
+    if (id && k === id && c.bringToFront) c.bringToFront();
+  }
+}
+
+function pintarLista(filtro = "") {
+  const f = filtro.trim().toLowerCase(), cont = document.getElementById("lista");
+  const visibles = catalogo.filter(e => !f || `${e.titulo} ${e.subtitulo} ${e.fecha} ${e.linea}`.toLowerCase().includes(f));
+  cont.innerHTML = visibles.length ? "" : `<div class="vacio">No hay mapas que coincidan con «${filtro}».</div>`;
+  visibles.forEach((e, i) => {
+    const b = document.createElement("button");
+    b.className = "tarjeta"; b.type = "button"; b.setAttribute("role", "listitem"); b.style.animationDelay = `${80 + i * 70}ms`;
+    const chips = Object.entries(e.cifras).map(([k, v]) => `<span class="chip">${fmt(v)} ${k}</span>`).join("");
+    b.innerHTML = `${insignia(e)}<span><span class="t-titulo">${e.titulo}<span class="t-fecha">${e.fecha}</span></span>
+                   <div class="t-sub">${e.subtitulo}</div><div class="chips">${chips}</div></span>`;
+    b.addEventListener("mouseenter", () => resaltar(e.id)); b.addEventListener("mouseleave", () => resaltar(null));
+    b.addEventListener("focus", () => resaltar(e.id)); b.addEventListener("blur", () => resaltar(null));
+    b.addEventListener("click", () => abrir(e.id));
+    cont.appendChild(b);
+  });
+}
+
+function abrir(id, sinVuelo = false) {
+  const e = catalogo.find(x => x.id === id); if (!e || abierto === id) return;
+  abierto = id;
+  if (location.hash !== `#${id}`) history.pushState(null, "", `#${id}`);
+  document.title = `${e.titulo} · ${e.fecha} · Movilidad en Madrid`;
+  document.getElementById("volver-insignia").outerHTML = insignia(e).replace('class="insignia', 'id="volver-insignia" class="insignia');
+  resaltar(id);
+  document.body.classList.add("abierto", "cargando-on");
+  const marco = document.getElementById("marco");
+  let listo = false, volado = sinVuelo;
+  const mostrar = () => { if (listo && volado && abierto === id) document.body.classList.remove("cargando-on"), document.body.classList.add("visible"); };
+  marco.onload = () => { listo = true; mostrar(); };
+  marco.src = `${e.carpeta}/index.html`;
+  if (sinVuelo) { mapa.fitBounds(e.caja, { padding: [60, 60] }); mostrar(); }
+  else {
+    mapa.once("moveend", () => { volado = true; setTimeout(mostrar, 150); });
+    mapa.flyToBounds(e.caja, { padding: [60, 60], duration: 1.3 });
+  }
+}
+
+function cerrar() {
+  if (!abierto) return;
+  abierto = null;
+  if (location.hash) history.pushState(null, "", location.pathname + location.search);
+  document.title = "Movilidad en transporte público · Madrid";
+  document.body.classList.remove("visible", "cargando-on");
+  setTimeout(() => {
+    document.body.classList.remove("abierto");
+    resaltar(null);
+    if (vistaInicial) mapa.flyToBounds(vistaInicial, { paddingTopLeft: [innerWidth > 720 ? 420 : 20, 40],
+                                                      paddingBottomRight: [40, innerWidth > 720 ? 40 : innerHeight * .6], duration: 1.2 });
+    setTimeout(() => { if (!abierto) document.getElementById("marco").src = "about:blank"; }, 700);
+  }, 350);
+}
+
+document.getElementById("volver").addEventListener("click", cerrar);
+document.addEventListener("keydown", ev => { if (ev.key === "Escape") cerrar(); });
+document.getElementById("buscar").addEventListener("input", ev => pintarLista(ev.target.value));
+addEventListener("hashchange", () => { const id = location.hash.slice(1); id ? abrir(id) : cerrar(); });
+addEventListener("popstate", () => { const id = location.hash.slice(1); id ? abrir(id) : cerrar(); });
+
+fetch("catalogo.json").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(async j => {
+  catalogo = j.mapas || [];
+  pintarLista();
+  await cargarPrevias();
+  const inicial = location.hash.slice(1);
+  if (inicial && catalogo.some(e => e.id === inicial)) abrir(inicial, true);
+}).catch(() => {
+  document.getElementById("lista").innerHTML = `<div class="vacio">No se encuentra <b>catalogo.json</b>. Ejecuta <code>python generar_catalogo.py</code>
+    y abre esta página desde un servidor (GitHub Pages o <code>python -m http.server</code>).</div>`;
+});
+</script>
+</body>
+</html>

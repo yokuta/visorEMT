@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ocupación de los autobuses de una línea a lo largo del día</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root { color-scheme: light; --papel: rgba(255,255,255,.95); --tinta: #1c2430; --suave: #5d6876; --linea: #d9dee5; --fondo: #e9ecef;
+          --ida: #1f5fad; --vuelta: #7a3f9f; --fuente: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; --papel: rgba(27,34,43,.95); --tinta: #e6ebf0;
+          --suave: #a7b2bf; --linea: #364352; --fondo: #1d232b; } }
+  :root[data-theme="dark"] { color-scheme: dark; --papel: rgba(27,34,43,.95); --tinta: #e6ebf0; --suave: #a7b2bf; --linea: #364352; --fondo: #1d232b; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; font-family: var(--fuente); color: var(--tinta); background: var(--fondo); }
+  #mapa { position: absolute; inset: 0; background: var(--fondo); }
+  .panel { position: absolute; z-index: 1000; left: 16px; top: calc(env(safe-area-inset-top, 0px) + 16px); width: 350px; max-height: calc(100% - 32px);
+           overflow: auto; background: var(--papel); border: 1px solid var(--linea); border-radius: 14px; padding: 18px; box-shadow: 0 6px 24px rgba(0,0,0,.12); }
+  h1 { font-size: 1.15rem; margin: 0 0 4px; }
+  .sub { color: var(--suave); font-size: .85rem; margin: 0 0 10px; }
+  .reloj { font-size: 2.6rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+  .fila { display: flex; align-items: center; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+  input[type=range] { width: 100%; accent-color: var(--ida); }
+  .boton, select { font: inherit; font-size: .88rem; border: 1px solid var(--linea); background: transparent; color: var(--tinta); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  .boton:focus-visible { outline: 3px solid #e08a00; outline-offset: 2px; }
+  .cifras { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin: 10px 0; }
+  .cifras div { border: 1px solid var(--linea); border-radius: 10px; padding: 8px; font-size: .75rem; color: var(--suave); }
+  .cifras b { display: block; font-size: 1.25rem; color: var(--tinta); font-variant-numeric: tabular-nums; }
+  .escala { height: 10px; border-radius: 5px; background: linear-gradient(90deg, #2e9d6a, #e0b400, #e07a00, #c0392b); margin: 4px 0 2px; }
+  .escala-txt { display: flex; justify-content: space-between; font-size: .75rem; color: var(--suave); }
+  .bus { display: flex; align-items: center; gap: 4px; padding: 2px 6px 2px 4px; border-radius: 6px; color: #fff; font-weight: 700; font-size: 12px;
+         white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.35); border: 2px solid rgba(255,255,255,.9); transform: translate(-50%, -50%);
+         position: absolute; font-family: var(--fuente); font-variant-numeric: tabular-nums; cursor: pointer; }
+  .bus small { font-weight: 600; opacity: .85; font-size: 10px; }
+  .bus.sel { outline: 3px solid #111; }
+  #perfil svg { width: 100%; height: 120px; display: block; }
+  #perfil .sub { margin: 4px 0; }
+  .carga { display: none; font-size: .85rem; }
+  @media (max-width: 640px) { .panel { left: 8px; right: 8px; width: auto; top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); max-height: 55%; } }
+</style>
+</head>
+<body>
+<div id="mapa" aria-label="Mapa de la línea"></div>
+<section class="panel" aria-label="Controles">
+  <h1 id="titulo">Línea</h1>
+  <p class="sub" id="subtitulo"></p>
+  <div class="reloj" id="reloj">07:00</div>
+  <div class="fila"><input type="range" id="tiempo" min="0" max="1" step="30" aria-label="Hora del día"></div>
+  <div class="fila">
+    <button class="boton" id="play" type="button">▶ Reproducir</button>
+    <select id="velocidad" aria-label="Velocidad"><option value="30">30×</option><option value="60" selected>60×</option><option value="180">180×</option><option value="600">600×</option></select>
+    <select id="sentido" aria-label="Sentido"><option value="todos">ambos sentidos</option></select>
+  </div>
+  <div class="cifras">
+    <div><b id="c-buses">0</b>autobuses en servicio</div>
+    <div><b id="c-bordo">0</b>a bordo (estimado)</div>
+    <div><b id="c-suben">0</b>subidas registradas hasta ahora</div>
+  </div>
+  <div class="escala"></div>
+  <div class="escala-txt"><span>vacío</span><span id="cap-media"></span><span id="cap-max"></span></div>
+  <p class="sub" style="margin-top:10px">Cada rectángulo es un autobús: el número grande es la gente a bordo estimada; el pequeño, las subidas
+     registradas desde que salió. Las subidas son observadas (validaciones); las bajadas, estimadas. Pulsa un autobús para ver su perfil.</p>
+  <div id="perfil"></div>
+  <div class="carga" id="carga"><p>Abre la página desde un servidor (o GitHub Pages). Si la abres como fichero, elige aquí los CSV y resumen.json:</p>
+    <input type="file" id="ficheros" multiple></div>
+</section>
+<script>
+function csv(texto) {
+  const filas = []; let fila = [], campo = "", q = false;
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i];
+    if (q) { if (c === '"') { if (texto[i + 1] === '"') { campo += '"'; i++; } else q = false; } else campo += c; }
+    else if (c === '"') q = true; else if (c === ",") { fila.push(campo); campo = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && texto[i + 1] === "\n") i++; fila.push(campo); filas.push(fila); fila = []; campo = ""; }
+    else campo += c;
+  }
+  if (campo || fila.length) { fila.push(campo); filas.push(fila); }
+  const cab = filas.shift();
+  return filas.filter(f => f.length === cab.length).map(f => Object.fromEntries(cab.map((h, k) => [h, f[k]])));
+}
+const hhmm = s => { s = ((Math.round(s) % 86400) + 86400) % 86400; return `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}`; };
+const mapa = L.map("mapa", { zoomControl: false }).setView([40.44, -3.70], 13);
+L.control.zoom({ position: "bottomright" }).addTo(mapa);
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+  { attribution: "Esri, HERE, Garmin, © OpenStreetMap", maxZoom: 18 }).addTo(mapa);
+const capaBuses = L.layerGroup().addTo(mapa);
+
+let R = {}, exps = [], T = 0, play = false, ultimo = 0, seleccion = null, sentidos = [];
+const colorSentido = s => sentidos.indexOf(s) === 0 ? getComputedStyle(document.documentElement).getPropertyValue("--ida") : getComputedStyle(document.documentElement).getPropertyValue("--vuelta");
+function colorCarga(x) {          // x = a bordo / capacidad
+  const p = [[0, [46, 157, 106]], [.5, [224, 180, 0]], [.8, [224, 122, 0]], [1, [192, 57, 43]]];
+  x = Math.max(0, Math.min(1, x));
+  for (let i = 1; i < p.length; i++) if (x <= p[i][0]) {
+    const [a, ca] = p[i - 1], [b, cb] = p[i], w = (x - a) / (b - a);
+    return `rgb(${ca.map((v, k) => Math.round(v + (cb[k] - v) * w)).join(",")})`;
+  }
+  return "rgb(192,57,43)";
+}
+
+function preparar(par, rec, exp, ocu, res) {
+  R = res;
+  document.getElementById("titulo").textContent = `Línea ${res.linea}: ocupación de los autobuses`;
+  document.getElementById("subtitulo").textContent = `${res.dia} · ${res.expediciones} expediciones · ${Number(res.subidas_validadas).toLocaleString("es-ES")} subidas validadas` +
+    (res.dia_horarios !== res.dia ? ` · horarios del ${res.dia_horarios}` : "");
+  document.getElementById("cap-media").textContent = `${Math.round(res.capacidad / 2)}`;
+  document.getElementById("cap-max").textContent = `${res.capacidad} plazas`;
+  sentidos = [...new Set(par.map(p => p.sentido))].sort();
+  const sel = document.getElementById("sentido");
+  sentidos.forEach((s, i) => { const o = document.createElement("option"); o.value = s;
+    const ps = par.filter(p => p.sentido === s); o.textContent = `hacia ${ps[ps.length - 1].nombre}`; sel.appendChild(o); });
+  const lineas = [];
+  for (const s of sentidos) {
+    const pts = rec.filter(r => r.sentido === s).map(r => [+r.lat, +r.lon]);
+    lineas.push(L.polyline(pts, { color: colorSentido(s), weight: 4, opacity: .55 }).addTo(mapa));
+    par.filter(p => p.sentido === s).forEach(p => L.circleMarker([+p.lat, +p.lon], { radius: 3.5, color: colorSentido(s), weight: 1.5, fillColor: "#fff", fillOpacity: 1 })
+      .bindTooltip(`${p.nombre}`).addTo(mapa));
+  }
+  if (lineas.length) mapa.fitBounds(L.featureGroup(lineas).getBounds(), { padding: [40, 40] });
+  const ocup = {};
+  for (const o of ocu) (ocup[o.exp] ??= {})[o.orden] = o;
+  const porExp = {};
+  for (const e of exp) (porExp[e.exp] ??= []).push(e);
+  exps = Object.entries(porExp).map(([id, ps]) => {
+    ps.sort((a, b) => +a.orden - +b.orden);
+    return { id, sentido: ps[0].sentido, t: ps.map(p => +p.hora_s), ll: ps.map(p => [+p.lat, +p.lon]), nombres: ps.map(p => p.nombre),
+             o: ps.map(p => ocup[id]?.[p.orden] ?? { a_bordo: 0, suben: 0, suben_acum: 0, bajan_estimadas: 0 }), marca: null };
+  });
+  const t0 = Math.min(...exps.map(e => e.t[0])), t1 = Math.max(...exps.map(e => e.t[e.t.length - 1]));
+  const d = document.getElementById("tiempo"); d.min = t0 - 600; d.max = t1 + 300; d.value = Math.max(t0, 7 * 3600); T = +d.value;
+  dibujar();
+}
+
+function estado(e, t) {
+  if (t < e.t[0] || t > e.t[e.t.length - 1]) return null;
+  let i = 0; while (i < e.t.length - 1 && e.t[i + 1] <= t) i++;
+  const j = Math.min(i + 1, e.t.length - 1), w = e.t[j] > e.t[i] ? (t - e.t[i]) / (e.t[j] - e.t[i]) : 0;
+  return { i, pos: [e.ll[i][0] + (e.ll[j][0] - e.ll[i][0]) * w, e.ll[i][1] + (e.ll[j][1] - e.ll[i][1]) * w] };
+}
+
+function dibujar() {
+  document.getElementById("reloj").textContent = hhmm(T);
+  const filtro = document.getElementById("sentido").value;
+  let nb = 0, bordo = 0, suben = 0;
+  for (const e of exps) {
+    const s = filtro === "todos" || filtro === e.sentido ? estado(e, T) : null;
+    if (!s) { if (e.marca) { capaBuses.removeLayer(e.marca); e.marca = null; } continue; }
+    const o = e.o[s.i], ab = +o.a_bordo, sa = +o.suben_acum;
+    nb++; bordo += ab; suben += sa;
+    const html = `<div class="bus${seleccion === e.id ? " sel" : ""}" style="background:${colorCarga(ab / R.capacidad)}">${R.linea}&nbsp;<span style="font-size:14px">${Math.round(ab)}</span><small>↑${sa}</small></div>`;
+    if (!e.marca) {
+      e.marca = L.marker(s.pos, { icon: L.divIcon({ className: "", html, iconSize: [0, 0] }) }).addTo(capaBuses);
+      e.marca.on("click", () => { seleccion = e.id; perfil(e); dibujar(); });
+    } else { e.marca.setLatLng(s.pos); e.marca.setIcon(L.divIcon({ className: "", html, iconSize: [0, 0] })); }
+    e.marca.bindTooltip(`Sale a las ${hhmm(e.t[0])} · siguiente parada: ${e.nombres[Math.min(s.i + 1, e.nombres.length - 1)]}<br>` +
+      `A bordo (estimado): <b>${Math.round(ab)}</b> de ${R.capacidad} plazas<br>Subidas registradas desde la salida: <b>${sa}</b>`);
+  }
+  document.getElementById("c-buses").textContent = nb;
+  document.getElementById("c-bordo").textContent = Math.round(bordo).toLocaleString("es-ES");
+  document.getElementById("c-suben").textContent = suben.toLocaleString("es-ES");
+}
+
+function perfil(e) {
+  const n = e.o.length, W = 320, H = 110, max = Math.max(R.capacidad * .5, ...e.o.map(o => +o.a_bordo)), bw = W / n;
+  const barras = e.o.map((o, k) => { const h = (+o.a_bordo / max) * (H - 14);
+    return `<rect x="${k * bw + 1}" y="${H - h}" width="${Math.max(bw - 2, 1)}" height="${h}" fill="${colorCarga(+o.a_bordo / R.capacidad)}"><title>${e.nombres[k]}: ${Math.round(+o.a_bordo)} a bordo, suben ${o.suben}</title></rect>`; }).join("");
+  const cap = H - (R.capacidad / max) * (H - 14);
+  document.getElementById("perfil").innerHTML = `<p class="sub"><b>Autobús que sale a las ${hhmm(e.t[0])}</b> · personas a bordo parada a parada</p>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Perfil de carga">${barras}${cap > 0 ? `<line x1="0" x2="${W}" y1="${cap}" y2="${cap}" stroke="#c0392b" stroke-dasharray="4 3"/>` : ""}</svg>
+    <p class="sub">${e.nombres[0]} → ${e.nombres[n - 1]} · máximo ${Math.round(Math.max(...e.o.map(o => +o.a_bordo)))} a bordo</p>`;
+}
+
+const d = document.getElementById("tiempo");
+d.addEventListener("input", () => { T = +d.value; dibujar(); });
+document.getElementById("sentido").addEventListener("change", dibujar);
+const bp = document.getElementById("play");
+bp.addEventListener("click", () => { play = !play; bp.textContent = play ? "❚❚ Pausa" : "▶ Reproducir"; ultimo = performance.now(); if (play) requestAnimationFrame(paso); });
+function paso(ahora) {
+  if (!play) return;
+  T += (ahora - ultimo) / 1000 * +document.getElementById("velocidad").value; ultimo = ahora;
+  if (T > +d.max) T = +d.min;
+  d.value = T; dibujar(); requestAnimationFrame(paso);
+}
+
+const nombres = ["paradas.csv", "recorrido.csv", "expediciones.csv", "ocupacion.csv", "resumen.json"];
+Promise.all(nombres.map(f => fetch(f).then(r => { if (!r.ok) throw 0; return r.text(); })))
+  .then(([a, b, c, e, r]) => preparar(csv(a), csv(b), csv(c), csv(e), JSON.parse(r)))
+  .catch(() => {
+    document.getElementById("carga").style.display = "block";
+    document.getElementById("ficheros").addEventListener("change", async ev => {
+      const fs = [...ev.target.files], leer = n => fs.find(f => f.name === n)?.text();
+      const t = await Promise.all(nombres.map(leer));
+      if (t.every(Boolean)) { document.getElementById("carga").style.display = "none"; preparar(csv(t[0]), csv(t[1]), csv(t[2]), csv(t[3]), JSON.parse(t[4])); }
+    });
+  });
+</script>
+</body>
+</html>

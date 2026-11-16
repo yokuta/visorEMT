@@ -1,0 +1,24 @@
+sentido,orden,stop_id,nombre,lat,lon
+0,1,2419,Moncloa,40.43391,-3.71891
+0,2,3688,Moncloa,40.43427,-3.71871
+0,3,1684,Cardenal Cisneros,40.44034,-3.72616
+0,4,1686,Agrónomos,40.4413,-3.72653
+0,5,1687,Metro Ciudad Universitaria,40.44352,-3.72697
+0,6,1689,Avenida Complutense - Ciencias Información,40.44561,-3.7273
+0,7,1691,Avenida Complutense - Jardín Botánico,40.44772,-3.72772
+0,8,1693,Paraninfo - Matemáticas,40.4502,-3.7274
+0,9,4285,Paraninfo - Telecomunicaciones,40.45214,-3.72774
+0,10,5370,Paraninfo - Informática,40.45279,-3.72966
+0,11,1696,Paraninfo - Derecho,40.45102,-3.72952
+0,12,1694,Paraninfo - Filosofía,40.44937,-3.72921
+0,13,4287,Escuela De Caminos,40.448,-3.73156
+0,14,4289,Filosofía B,40.44931,-3.73361
+0,15,4290,Ciudad Universitaria,40.44844,-3.73416
+1,1,4290,Ciudad Universitaria,40.44844,-3.73416
+1,2,4288,Escuela De Caminos,40.44786,-3.73153
+1,3,1692,Avenida Complutense - Jardín Botánico,40.44772,-3.72803
+1,4,1690,Avenida Complutense - Ciencias Información,40.44543,-3.72764
+1,5,1688,Metro Ciudad Universitaria,40.44333,-3.72732
+1,6,1685,Cardenal Cisneros,40.4405,-3.72683
+1,7,1331,Avenida De La Memoria,40.43808,-3.72461
+1,8,2419,Moncloa,40.43391,-3.71891

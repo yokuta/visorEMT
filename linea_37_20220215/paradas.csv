@@ -1,0 +1,51 @@
+sentido,orden,stop_id,nombre,lat,lon
+0,1,1381,Cuatro Caminos,40.44544,-3.70418
+0,2,1382,Bravo Murillo - Cristóbal Bordiú,40.44345,-3.70425
+0,3,4496,Juan Zorrilla,40.44175,-3.70425
+0,4,1383,Canal,40.43821,-3.70434
+0,5,1384,Bravo Murillo - Donoso Cortés,40.43667,-3.70444
+0,6,3389,Bravo Murillo - Quevedo,40.43477,-3.70444
+0,7,3379,Quevedo,40.43297,-3.70419
+0,8,3377,Fuencarral - Alburquerque,40.43155,-3.70358
+0,9,3375,Fuencarral - Bilbao,40.42952,-3.70269
+0,10,1227,Sagasta,40.42822,-3.69899
+0,11,1229,Alonso Martínez,40.42728,-3.69513
+0,12,5627,Metro Colón,40.42521,-3.69125
+0,13,68,Recoletos,40.42285,-3.69152
+0,14,73,Cibeles,40.42019,-3.69281
+0,15,76,Banco De España,40.41778,-3.69424
+0,16,77,Neptuno,40.41508,-3.69466
+0,17,79,Museo Del Prado - Jardín Botánico,40.41232,-3.69343
+0,18,81,Prado - Atocha,40.40988,-3.69263
+0,19,1401,Estación De Atocha,40.40669,-3.68909
+0,20,1402,Basílica De Atocha,40.40548,-3.68507
+0,21,1404,Metro Menéndez Pelayo,40.40402,-3.68048
+0,22,1406,Junta Municipal Retiro,40.40301,-3.67828
+0,23,1408,Pacífico,40.40148,-3.67544
+0,24,1410,Ciudad De Barcelona - Seco,40.39969,-3.67201
+0,25,2058,Puente De Vallecas,40.39867,-3.67009
+0,26,1000,Puente De Vallecas,40.39807,-3.6694
+1,1,1000,Puente De Vallecas,40.39807,-3.6694
+1,2,1411,Ciudad De Barcelona - Seco,40.39987,-3.67188
+1,3,1409,Pacífico,40.40175,-3.67542
+1,4,1407,Junta Municipal Retiro,40.40318,-3.67808
+1,5,1405,Metro Menéndez Pelayo,40.40468,-3.68148
+1,6,1403,Basílica De Atocha,40.40573,-3.68495
+1,7,2044,Ministerio De Agricultura,40.40841,-3.69035
+1,8,82,Prado - Atocha,40.41002,-3.69218
+1,9,5511,Museo Del Prado - Jardín Botánico,40.41304,-3.69283
+1,10,78,Neptuno,40.4156,-3.69327
+1,11,5443,Cibeles - Ayuntamiento,40.41868,-3.693
+1,12,72,Cibeles - Casa De América,40.42031,-3.69214
+1,13,5564,Bárbara De Braganza,40.4235,-3.69231
+1,14,1393,Salesas,40.42411,-3.69471
+1,15,5876,Santa Bárbara,40.42626,-3.6974
+1,16,5044,Francisco De Rojas,40.4297,-3.69965
+1,17,3555,Luchana,40.4308,-3.69972
+1,18,1869,Iglesia,40.43465,-3.69842
+1,19,1870,Santa Engracia - García De Paredes,40.43634,-3.69917
+1,20,1397,Santa Engracia - Bretón De Los Herreros,40.43952,-3.70053
+1,21,1398,Metro Ríos Rosas,40.44182,-3.70151
+1,22,1399,Santa Engracia - María De Guzmán,40.44415,-3.70254
+1,23,1420,Cuatro Caminos,40.44601,-3.70338
+1,24,1381,Cuatro Caminos,40.44544,-3.70418

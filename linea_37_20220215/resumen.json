@@ -1,0 +1,12 @@
+{
+ "linea": "37",
+ "dia": "2022-02-15",
+ "dia_horarios": "2022-02-15",
+ "gtfs": "20220215_210124_EMT_MADRID_r5v3.zip",
+ "capacidad": 80,
+ "subidas_validadas": 4836,
+ "subidas_asignadas": 4836,
+ "sin_expedicion": 0,
+ "con_bajada_conocida_pct": 70.0,
+ "expediciones": 186
+}
