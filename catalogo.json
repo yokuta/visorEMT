@@ -35,8 +35,8 @@
    "dia": "2022-02-15",
    "subtitulo": "Cuatro Caminos – Ciudad Universitaria",
    "cifras": {
-    "expediciones": 255,
-    "subidas": 4334
+    "expediciones": ,
+    "subidas": 
    },
    "caja": [
     [
@@ -60,8 +60,8 @@
    "dia": "2022-02-15",
    "subtitulo": "Moncloa – Ciudad Universitaria",
    "cifras": {
-    "expediciones": 343,
-    "subidas": 8561
+    "expediciones": ,
+    "subidas": 
    },
    "caja": [
     [
@@ -85,8 +85,8 @@
    "dia": "2022-02-15",
    "subtitulo": "Cuatro Caminos – Puente De Vallecas",
    "cifras": {
-    "expediciones": 186,
-    "subidas": 4836
+    "expediciones": ,
+    "subidas": 
    },
    "caja": [
     [
