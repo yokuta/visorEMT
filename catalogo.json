@@ -1,6 +1,30 @@
 {
  "mapas": [
   {
+   "id": "estaciones",
+   "tipo": "estaciones",
+   "carpeta": "estaciones",
+   "linea": "M",
+   "color": "#1f5fad",
+   "titulo": "Demanda de las estaciones",
+   "fecha": "febrero 2022",
+   "dia": "2022-02",
+   "subtitulo": "Metro, Cercanías y Metro Ligero en Madrid capital",
+   "cifras": {
+    "estaciones": 224
+   },
+   "caja": [
+    [
+     40.33191,
+     -3.80774
+    ],
+    [
+     40.55857,
+     -3.5338499999999997
+    ]
+   ]
+  },
+  {
    "id": "linea_F_20220215",
    "tipo": "linea",
    "carpeta": "linea_F_20220215",
@@ -10,6 +34,10 @@
    "fecha": "15 feb 2022",
    "dia": "2022-02-15",
    "subtitulo": "Cuatro Caminos – Ciudad Universitaria",
+   "cifras": {
+    "expediciones": 255,
+    "subidas": 4334
+   },
    "caja": [
     [
      40.445643355975,
@@ -31,6 +59,10 @@
    "fecha": "15 feb 2022",
    "dia": "2022-02-15",
    "subtitulo": "Moncloa – Ciudad Universitaria",
+   "cifras": {
+    "expediciones": 343,
+    "subidas": 8561
+   },
    "caja": [
     [
      40.433853424205,
@@ -52,6 +84,10 @@
    "fecha": "15 feb 2022",
    "dia": "2022-02-15",
    "subtitulo": "Cuatro Caminos – Puente De Vallecas",
+   "cifras": {
+    "expediciones": 186,
+    "subidas": 4836
+   },
    "caja": [
     [
      40.3980936383918,
