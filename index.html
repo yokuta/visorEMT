@@ -227,15 +227,22 @@ addEventListener("hashchange", () => { const id = location.hash.slice(1); id ? a
 addEventListener("popstate", () => { const id = location.hash.slice(1); id ? abrir(id) : cerrar(); });
 
 fetch("catalogo.json").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(async j => {
-  catalogo = j.mapas || [];
+  catalogo = (j.mapas || []).filter(e => e.tipo === "linea");
   pintarLista();
   await cargarPrevias();
   const inicial = location.hash.slice(1);
   if (inicial && catalogo.some(e => e.id === inicial)) abrir(inicial, true);
-}).catch(() => {
-  document.getElementById("lista").innerHTML = `<div class="vacio">No se encuentra <b>catalogo.json</b>. Ejecuta <code>python generar_catalogo.py</code>
-    y abre esta página desde un servidor (GitHub Pages o <code>python -m http.server</code>).</div>`;
+}).catch(err => {
+  console.error("Error al cargar el catálogo:", err);
+
+  document.getElementById("lista").innerHTML = `
+    <div class="vacio">
+      Error al cargar el catálogo:
+      ${err.message}
+    </div>
+  `;
 });
+
 </script>
 </body>
 </html>
